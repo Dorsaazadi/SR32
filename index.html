@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map { height: 600px; width: 100%; }
+        .legend {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>My Interactive Map</h1>
+    <div id="map"></div>
+
+    <script>
+        // Initialize the Leaflet map
+        var map = L.map('map').setView([37.8, -96], 4); // Adjust center & zoom
+
+        // Add a tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Define category colors
+        var categoryColors = {
+            "alternative SR32 route": "#E5E4E2",
+            "congestion problem": "#DC7633",
+            "finish the SR32 trail": "#145A32",
+            "Improve Landscaping": "#1E8449",
+            "improve pedestrian crossing": "#2ECC71",
+            "improve sidewalk/trails/biking facilities": "#1ABC9C",
+            "improve walkable city centers": "#48C9B0",
+            "Limit the developments": "#800080",
+            "more commercials/local commercials": "#00008B",
+            "preserve rural character/farm lands/corridor view/dark sky/wildlife": "#3498DB",
+            "proposing roundabout/bypass": "#654321",
+            "reduce parking": "#B7950B",
+            "safety issue": "#FFFF00",
+            "Speeding Issues": "#FF0000",
+            "other": "#808080"
+        };
+
+        // Load the GeoJSON file
+        fetch('df_map_export.geojson')
+          .then(response => response.json())
+          .then(data => {
+              L.geoJSON(data, {
+                  pointToLayer: function (feature, latlng) {
+                      var category = feature.properties.categories || "other";
+                      var color = categoryColors[category] || "#808080";
+                      var likes = feature.properties.like || 0;
+                      var dislikes = feature.properties.dislike || 0;
+                      var comments = feature.properties.comments || "N/A";
+
+                      var popupContent = `<b>Category:</b> ${category}<br>
+                                          <b>Likes:</b> ${likes}<br>
+                                          <b>Dislikes:</b> ${dislikes}<br>
+                                          <b>Comments:</b> ${comments}`;
+
+                      return L.circleMarker(latlng, {
+                          radius: 5 + (likes / 10) * 5,  // Scale between 5 and 20
+                          color: color,
+                          fillColor: color,
+                          fillOpacity: 0.7
+                      }).bindPopup(popupContent);
+                  }
+              }).addTo(map);
+          })
+          .catch(error => console.error("Error loading GeoJSON:", error));
+
+        // Create a legend
+        var legend = L.control({position: "topright"});
+        legend.onAdd = function () {
+            var div = L.DomUtil.create("div", "legend");
+            div.innerHTML += "<b>Legend</b><br>";
+            for (var key in categoryColors) {
+                div.innerHTML += `<div style="display:flex;align-items:center;margin:5px 0;">
+                                  <div style="width:18px;height:18px;background:${categoryColors[key]};margin-right:10px;"></div>${key}</div>`;
+            }
+            return div;
+        };
+        legend.addTo(map);
+    </script>
+</body>
+</html>
